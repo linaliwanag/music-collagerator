@@ -51,13 +51,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAuthenticated = !!accessToken;
 
+  const setAuthTokens = (token: string, expiresIn: number) => {
+    setAccessToken(token);
+    const expiry = new Date().getTime() + expiresIn * 1000;
+    setExpiryTime(expiry);
+    
+    if (isHydrated) {
+      localStorage.setItem('accessToken', token);
+      localStorage.setItem('expiryTime', expiry.toString());
+    }
+  };
+
+  const clearAuthState = () => {
+    setAccessToken(null);
+    setUser(null);
+    setExpiryTime(null);
+    
+    if (isHydrated) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('expiryTime');
+      localStorage.removeItem('user');
+    }
+  };
+
+  const refreshTokenHandler = async () => {
+    if (!isHydrated) return;
+    
+    try {
+      const data = await refreshToken();
+      setAuthTokens(data.accessToken, data.expiresIn);
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      clearAuthState();
+    }
+  };
+
+  const login = () => {
+    router.push('/login');
+  };
+
+  const logout = async () => {
+    if (isHydrated) {
+      try {
+        await logoutApi();
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+      
+      clearAuthState();
+    }
+    
+    router.push('/');
+  };
+
+  const setUserData = (userData: User) => {
+    setUser(userData);
+    if (isHydrated) {
+      localStorage.setItem('user', JSON.stringify(userData));
+    }
+  };
+
   // This runs only on the client after hydration is complete
   useEffect(() => {
     setIsHydrated(true);
     
     const init = async () => {
       try {
-        // Now it's safe to access browser APIs
         const storedToken = localStorage.getItem('accessToken');
         const storedExpiry = localStorage.getItem('expiryTime');
         const storedUser = localStorage.getItem('user');
@@ -69,7 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(JSON.parse(storedUser));
           }
         } else if (storedExpiry && new Date().getTime() >= parseInt(storedExpiry)) {
-          // Token expired, try to refresh
           await refreshTokenHandler();
         }
       } catch (error) {
@@ -90,12 +148,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let refreshInterval: NodeJS.Timeout;
 
     if (accessToken && expiryTime) {
-      // Refresh 5 minutes before token expires
       const refreshTime = expiryTime - new Date().getTime() - 5 * 60 * 1000;
       if (refreshTime > 0) {
         refreshInterval = setTimeout(refreshTokenHandler, refreshTime);
       } else {
-        // Token already expired or about to expire
         refreshTokenHandler();
       }
     }
@@ -103,68 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (refreshInterval) clearTimeout(refreshInterval);
     };
-  }, [accessToken, expiryTime, isHydrated]);
-
-  const refreshTokenHandler = async () => {
-    if (!isHydrated) return;
-    
-    try {
-      const data = await refreshToken();
-      setAuthTokens(data.accessToken, data.expiresIn);
-    } catch (error) {
-      console.error('Token refresh error:', error);
-      clearAuthState();
-    }
-  };
-
-  const login = () => {
-    router.push('/login');
-  };
-
-  const clearAuthState = () => {
-    setAccessToken(null);
-    setUser(null);
-    setExpiryTime(null);
-    
-    if (isHydrated) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('expiryTime');
-      localStorage.removeItem('user');
-    }
-  };
-
-  const logout = async () => {
-    if (isHydrated) {
-      try {
-        // Call the logout API to clear server-side cookies
-        await logoutApi();
-      } catch (error) {
-        console.error('Logout error:', error);
-      }
-      
-      clearAuthState();
-    }
-    
-    router.push('/');
-  };
-
-  const setAuthTokens = (token: string, expiresIn: number) => {
-    setAccessToken(token);
-    const expiry = new Date().getTime() + expiresIn * 1000;
-    setExpiryTime(expiry);
-    
-    if (isHydrated) {
-      localStorage.setItem('accessToken', token);
-      localStorage.setItem('expiryTime', expiry.toString());
-    }
-  };
-
-  const setUserData = (userData: User) => {
-    setUser(userData);
-    if (isHydrated) {
-      localStorage.setItem('user', JSON.stringify(userData));
-    }
-  };
+  }, [accessToken, expiryTime, isHydrated, refreshTokenHandler]);
 
   const value = {
     accessToken,
