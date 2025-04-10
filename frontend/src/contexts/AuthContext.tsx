@@ -21,6 +21,8 @@ interface AuthContextType {
   logout: () => void;
   setAuthTokens: (accessToken: string, expiresIn: number) => void;
   setUser: (user: User) => void;
+  clearAuthState: () => void;
+  refreshTokenHandler: () => Promise<void>;
 }
 
 const defaultContext: AuthContextType = {
@@ -33,6 +35,8 @@ const defaultContext: AuthContextType = {
   logout: () => {},
   setAuthTokens: () => {},
   setUser: () => {},
+  clearAuthState: () => {},
+  refreshTokenHandler: () => Promise.resolve(),
 };
 
 const AuthContext = createContext<AuthContextType>(defaultContext);
@@ -172,6 +176,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     setAuthTokens,
     setUser: setUserData,
+    clearAuthState,
+    refreshTokenHandler,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

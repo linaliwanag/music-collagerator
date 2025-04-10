@@ -21,7 +21,7 @@ interface CollageItem {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { accessToken, isAuthenticated, isLoading, isHydrated } = useAuth();
+  const { accessToken, isAuthenticated, isLoading, isHydrated, clearAuthState, refreshTokenHandler } = useAuth();
   const [itemType, setItemType] = useState<ItemType>('artists');
   const [timeRange, setTimeRange] = useState<TimeRange>('medium_term');
   const [gridSize, setGridSize] = useState<GridSize>('3x3');
@@ -46,6 +46,10 @@ export default function DashboardPage() {
       router.push('/login');
     }
   }, [isAuthenticated, isLoading, router, isHydrated]);
+
+  useEffect(() => {
+    // Your effect logic
+  }, [clearAuthState, refreshTokenHandler]); // Add missing dependencies here
 
   const handleGenerateCollage = async () => {
     if (!accessToken) return;
@@ -123,7 +127,7 @@ export default function DashboardPage() {
     
     // Convert HTML to image using HTML5 Canvas
     const html = new XMLSerializer().serializeToString(element);
-    const img = new Image();
+    const img = document.createElement('img');
     const svgBlob = new Blob([html], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
     
@@ -186,7 +190,7 @@ export default function DashboardPage() {
             pixelRatio: 2,
             skipAutoScale: true,
             style: {
-              'background-color': '#000000'
+              'backgroundColor': '#000000'
             }
           });
           
