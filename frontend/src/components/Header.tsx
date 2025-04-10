@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import NextImage from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import ClientOnly from './ClientOnly';
 
@@ -34,7 +34,7 @@ const Header = () => {
                 <div className="flex items-center space-x-3">
                   {user?.images && user.images.length > 0 ? (
                     <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                      <Image 
+                      <NextImage 
                         src={user.images[0].url} 
                         alt={user.display_name || 'User'} 
                         fill
