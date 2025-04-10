@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { refreshToken, logoutApi } from '@/utils/api';
 import { useRouter } from 'next/navigation';
 
@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const refreshTokenHandler = async () => {
+  const refreshTokenHandler = useCallback(async () => {
     if (!isHydrated) return;
     
     try {
@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Token refresh error:', error);
       clearAuthState();
     }
-  };
+  }, [isHydrated, setAuthTokens, clearAuthState]);
 
   const login = () => {
     router.push('/login');

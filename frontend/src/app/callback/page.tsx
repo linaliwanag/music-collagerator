@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { handleCallback, getUserProfile } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import Header from '@/components/Header';
 import ClientOnly from '@/components/ClientOnly';
 
-export default function CallbackPage() {
+function CallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuthTokens, setUser, isHydrated } = useAuth();
@@ -104,5 +104,13 @@ export default function CallbackPage() {
         </div>
       </ClientOnly>
     </main>
+  );
+}
+
+export default function CallbackPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CallbackContent />
+    </Suspense>
   );
 } 
