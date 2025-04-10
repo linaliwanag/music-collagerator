@@ -7,12 +7,22 @@ const cookieParser = require("cookie-parser");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Parse allowed origins from environment variable
+const getAllowedOrigins = () => {
+  const origins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : [];
+  // Always include localhost for development
+  if (process.env.NODE_ENV !== 'production') {
+    origins.push('http://localhost:3000');
+  }
+  return origins;
+};
+
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  origin: getAllowedOrigins(),
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -27,7 +37,7 @@ app.use((req, res, next) => {
 const spotifyApi = new SpotifyWebApi({
   clientId: process.env.SPOTIFY_CLIENT_ID,
   clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
-  redirectUri: process.env.REDIRECT_URI || "http://localhost:3000/callback"
+  redirectUri: process.env.REDIRECT_URI
 });
 
 // Test Route
