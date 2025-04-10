@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import NextImage from 'next/image';
 import { generateCollage } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -439,7 +439,7 @@ export default function DashboardPage() {
                       <div key={index} className="relative aspect-square">
                         {item.imageUrl ? (
                           <div className="relative w-full h-full">
-                            <Image
+                            <NextImage
                               src={item.imageUrl}
                               alt={item.name}
                               fill
