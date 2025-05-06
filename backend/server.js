@@ -259,7 +259,9 @@ app.post("/api/generate-collage", async (req, res) => {
             
         return {
           name: item.name,
-          imageUrl: bestImage?.url || ''
+          imageUrl: bestImage?.url || '',
+          spotifyUrl: item.external_urls.spotify,
+          id: item.id
         };
       } else if (type === 'tracks') {
         // For tracks, select the highest quality album image
@@ -271,7 +273,9 @@ app.post("/api/generate-collage", async (req, res) => {
         return {
           name: item.name,
           artist: item.artists[0].name,
-          imageUrl: bestImage?.url || ''
+          imageUrl: bestImage?.url || '',
+          spotifyUrl: item.external_urls.spotify,
+          id: item.id
         };
       }
     });
@@ -282,7 +286,11 @@ app.post("/api/generate-collage", async (req, res) => {
       images,
       collageSize,
       type,
-      timeRange
+      timeRange,
+      attribution: {
+        spotifyLogo: "https://developer.spotify.com/assets/branding-guidelines/logo@2x.png",
+        disclaimer: "This collage is generated using Spotify content and is for personal use only. All content belongs to Spotify."
+      }
     });
   } catch (error) {
     console.error("Error generating collage:", error.message);
