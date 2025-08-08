@@ -171,114 +171,109 @@ export default function DashboardPage() {
         await waitForImagesToLoad();
       } catch (error) {
         console.error('Error waiting for images to load:', error);
-        toast.error('Some images failed to load. Download quality may be affected.', { id: toastId });
+        toast.error('Some images failed to load. Please try again.', { id: toastId });
+        setIsDownloading(false);
+        return;
       }
+
+      // Detect if we're on a mobile device
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
+      // Configure image options based on device
+      const imageOptions = {
+        quality: 0.95,
+        canvasWidth: collageItems.length <= 9 ? 1200 : 1600,
+        canvasHeight: collageItems.length <= 9 ? 1200 : 1600,
+        pixelRatio: isMobile ? 1 : 2, // Lower pixel ratio for mobile to reduce memory usage
+        skipAutoScale: true,
+        style: {
+          'backgroundColor': '#000000'
+        },
+        cacheBust: true, // Add cache busting for mobile browsers
+      };
+
       // Try multiple methods in sequence until one works
-      
-      // 1. Try html-to-image first (most reliable)
       try {
-        console.log('Attempt 1: Using html-to-image');
+        console.log('Attempting to convert collage to PNG...');
         const htmlToImage = await import('html-to-image');
         
         try {
-          console.log('Attempting to convert collage to PNG...');
-          const dataUrl = await htmlToImage.toPng(collageRef.current, { 
-            quality: 0.95,
-            canvasWidth: collageItems.length <= 9 ? 1200 : 1600,
-            canvasHeight: collageItems.length <= 9 ? 1200 : 1600,
-            pixelRatio: 2,
-            skipAutoScale: true,
-            style: {
-              'backgroundColor': '#000000'
-            }
-          });
+          // Force all images to be fully loaded again
+          const images = collageRef.current.querySelectorAll('img');
+          await Promise.all(Array.from(images).map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              // Reload the image with cache busting
+              const currentSrc = img.src;
+              img.src = `${currentSrc}${currentSrc.includes('?') ? '&' : '?'}cache=${Date.now()}`;
+            });
+          }));
+
+          // Try PNG first
+          const dataUrl = await htmlToImage.toPng(collageRef.current, imageOptions);
           
-          const link = document.createElement('a');
-          link.download = `spotify-collage-${itemType}-${timeRange}.png`;
-          link.href = dataUrl;
-          link.click();
+          if (isMobile) {
+            // For mobile, create a temporary link and trigger download
+            const link = document.createElement('a');
+            link.download = `spotify-collage-${itemType}-${timeRange}.png`;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } else {
+            // For desktop, use the normal download method
+            const link = document.createElement('a');
+            link.download = `spotify-collage-${itemType}-${timeRange}.png`;
+            link.href = dataUrl;
+            link.click();
+          }
           
           toast.success('Collage downloaded!', { id: toastId });
-          return; // Success - exit early
+          return;
         } catch (pngError) {
           console.error('PNG conversion failed:', pngError);
           
-          // Try JPEG instead
+          // Try JPEG as fallback
           try {
-            console.log('Attempt 2: Using html-to-image with JPEG');
-            const jpegDataUrl = await htmlToImage.toJpeg(collageRef.current, { 
-              quality: 0.95,
-              canvasWidth: collageItems.length <= 9 ? 1200 : 1600,
-              canvasHeight: collageItems.length <= 9 ? 1200 : 1600,
-              pixelRatio: 2,
-              backgroundColor: '#000000'
+            console.log('Attempting JPEG conversion as fallback...');
+            const jpegDataUrl = await htmlToImage.toJpeg(collageRef.current, {
+              ...imageOptions,
+              quality: 0.9 // Slightly lower quality for JPEG to ensure it works
             });
             
             const link = document.createElement('a');
             link.download = `spotify-collage-${itemType}-${timeRange}.jpg`;
             link.href = jpegDataUrl;
-            link.click();
+            
+            if (isMobile) {
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            } else {
+              link.click();
+            }
             
             toast.success('Collage downloaded as JPG!', { id: toastId });
-            return; // Success - exit early
+            return;
           } catch (jpegError) {
             console.error('JPEG conversion failed:', jpegError);
-            // Continue to next method
+            throw jpegError;
           }
         }
-      } catch (importError) {
-        console.error('Failed to import html-to-image:', importError);
-        // Continue to next method
-      }
-      
-      // 2. Try dom-to-image as a fallback
-      try {
-        console.log('Attempt 3: Using dom-to-image');
-        const domToImage = await import('dom-to-image');
-        
-        try {
-          const dataUrl = await domToImage.toPng(collageRef.current, {
-            bgcolor: '#000000',
-            quality: 1.0,
-            width: collageItems.length <= 9 ? 1200 : 1600,
-            height: collageItems.length <= 9 ? 1200 : 1600,
-          });
-          
-          const link = document.createElement('a');
-          link.download = `spotify-collage-${itemType}-${timeRange}.png`;
-          link.href = dataUrl;
-          link.click();
-          
-          toast.success('Collage downloaded (using alternative method)!', { id: toastId });
-          return; // Success - exit early
-        } catch (domToImageError) {
-          console.error('dom-to-image failed:', domToImageError);
-          // Continue to next method
-        }
-      } catch (importError) {
-        console.error('Failed to import dom-to-image:', importError);
-        // Continue to next method
-      }
-      
-      // 3. Last resort - try our simple canvas method
-      try {
-        console.log('Attempt 4: Using canvas fallback');
-        await createCanvasScreenshot(
-          collageRef.current, 
-          `spotify-collage-${itemType}-${timeRange}.png`
+      } catch (error) {
+        console.error('Image conversion failed:', error);
+        toast.error(
+          isMobile 
+            ? 'Download failed. Please try using Chrome or Safari on your mobile device.'
+            : 'Download failed. Please try a different browser.',
+          { id: toastId }
         );
-        toast.success('Collage downloaded (basic quality)!', { id: toastId });
-        return; // Success - exit early
-      } catch (canvasError) {
-        console.error('Canvas fallback failed:', canvasError);
-        // All methods have failed
-        toast.error('All download methods failed. Please try in a different browser.', { id: toastId });
       }
-      
     } catch (error) {
       console.error('Unexpected error in download process:', error);
-      toast.error('Download failed due to an unexpected error.', { id: toastId });
+      toast.error('Download failed. Please try again.', { id: toastId });
     } finally {
       setIsDownloading(false);
     }
